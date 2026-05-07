@@ -11,6 +11,7 @@ catch_errors
 setting_up_container
 network_check
 update_os
+setup_yq
 
 # Get required configuration — skip prompts if already set (generated/unattended mode)
 if [[ -z "${var_forgejo_instance:-}" ]]; then
@@ -60,13 +61,21 @@ msg_ok "Installed Forgejo Runner"
 
 msg_info "Registering Forgejo Runner"
 export DOCKER_HOST="unix:///run/podman/podman.sock"
-cd /root
-forgejo-runner register \
-  --instance "$FORGEJO_INSTANCE" \
-  --token "$FORGEJO_RUNNER_TOKEN" \
-  --name "$(hostname)" \
-  --labels "$RUNNER_LABELS" \
-  --no-interactive
+#cd /root
+msg_info "Generating Forgejo Runner Configuration"
+CONFIG_FILE="/root/.forgejo-runner.yml"
+forgejo-runner generate-config > $CONFIG_FILE
+yq -i '.container.docker_host = "${DOCKER_HOST}"' $CONFIG_FILE
+msg_ok "Generated Forgejo Runner Configuration"
+
+# forgejo-runner register \
+#   --instance "$FORGEJO_INSTANCE" \
+#   --token "$FORGEJO_RUNNER_TOKEN" \
+#   --name "$(hostname)" \
+#   --labels "$RUNNER_LABELS" \
+#   --no-interactive
+
+msg_info "Starting Forgejo Runner $CONFIG_FILE"
 msg_ok "Registered Forgejo Runner"
 
 msg_info "Creating Services"
@@ -81,7 +90,7 @@ Requires=podman.socket
 User=root
 WorkingDirectory=/root
 Environment=DOCKER_HOST=unix:///run/podman/podman.sock
-ExecStart=/usr/local/bin/forgejo-runner daemon
+ExecStart=/usr/local/bin/forgejo-runner daemon -c $CONFIG_FILE
 Restart=on-failure
 RestartSec=10
 TimeoutSec=0
