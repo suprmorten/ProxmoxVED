@@ -42,7 +42,7 @@ fi
 export FORGEJO_INSTANCE="$var_forgejo_instance"
 export FORGEJO_RUNNER_TOKEN="$var_forgejo_runner_token"
 
-msg_info "Installing dependencies"
+msg_info "Installing dependencies for Forgejo Runner"
 $STD apt install -y \
   git \
   podman podman-docker
